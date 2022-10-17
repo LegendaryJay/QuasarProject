@@ -297,21 +297,20 @@ export default {
     }
 
     function editCategory(item){
-      const title = ref(item.title)
+      const newItem = {title: item.title}
       $q.dialog({
         component: CategoryInput,
         // props forwarded to your custom component
+
         componentProps: {
           title: "Edit Category",
           cancelActive: true,
           confirmText: "Save Changes",
-          itemTitle: title,
+          item: newItem,
+          onSave: () => saveCategoryChanges(item, newItem)
           // ...more..props...
         },
-      }).onOk(() => {
-        saveCategoryChanges(item, {...item, title:title.value})
       })
-
     }
 
     //

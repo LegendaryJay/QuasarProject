@@ -5,14 +5,14 @@
       <q-card-section v-if="title">
         <div class="text-h6 text-bold">{{ title }}</div>
       </q-card-section>
-
+      <!-- eslint-disable -->
       <q-card-section>
         <q-input
-            :model-value="itemTitle.value"
-            @update:model-value="(value) => $emit('update:itemTitle', value)"
+            :model-value="item.title"
+            @update:model-value="(value) => {item.title=value}"
             label="Title"/>
       </q-card-section>
-
+      <!-- eslint-enable -->
       <q-card-actions align="right">
         <q-btn color="grey" label="Cancel" @click="onCancelClick" v-if="cancelActive"/>
         <q-btn color="primary" :label="confirmText" @click="onOKClick"/>
@@ -22,6 +22,7 @@
 </template>
 
 <script>
+/* eslint-disable-next-line vue/no-mutating-props */
 import {useDialogPluginComponent} from 'quasar'
 
 
@@ -39,20 +40,23 @@ export default {
       type: String,
       default: "OK",
     },
-    itemTitle: {
+    item: {
       type: Object,
       required: true,
     },
+    onSave: {
+      type:Function,
+      required:true,
+    }
     // ...your custom props
   },
   emits: [
-    'update:itemTitle',
     // REQUIRED; need to specify some events that your
     // component will emit through useDialogPluginComponent()
     ...useDialogPluginComponent.emits
   ],
 
-  setup() {
+  setup(props) {
 
 
     // REQUIRED; must be called inside of setup()
@@ -75,7 +79,7 @@ export default {
       // other methods that we used in our vue html template;
       // these are part of our example (so not required)
       onOKClick() {
-
+        props.onSave()
         // on OK, it is REQUIRED to
         // call onDialogOK (with optional payload)
         onDialogOK()
