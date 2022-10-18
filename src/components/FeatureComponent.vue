@@ -21,9 +21,13 @@ export default {
     nextPage: {
       type: Object,
       required: true,
+    },
+    editFeature: {
+      type: Function,
+      required: true,
     }
   },
-  emits: ['set-category-page', 'go-to-next-page', 'swapRelativePositions', 'delete', "edit"],
+  emits: ['set-category-page', 'go-to-next-page', 'swapRelativePositions', 'delete'],
   setup(props) {
     const buttonTitle = computed(
         () => typeof props.nextPage === "undefined" ? "Download Now!" : props.nextPage.title
@@ -38,7 +42,7 @@ export default {
 
 <template>
   <q-page-container>
-    <h3 class="text-h3 q-my-sm q-mt-md q-mx-md text-center text-bold"> {{pageCategory.title}}</h3>
+    <h3 class="text-h3 q-my-sm q-mt-md q-mx-md text-center text-bold"> {{pageCategory.title}} </h3>
     <FeatureComponentItem
         v-for="(feature, index) in features"
         :key="index"
@@ -46,12 +50,12 @@ export default {
         @up="$emit('swapRelativePositions',index, -1)"
         @down="$emit('swapRelativePositions',index, 1)"
         @delete="$emit('delete',feature.id)"
-        @edit="$emit('edit')"
+        @edit="editFeature(feature)"
         :disable-down="index===(features.length-1)"
         :disable-up="index===0"
     >
     </FeatureComponentItem>
-    <div class="q-pa-md">
+    <div class="q-pa-md text-center row justify-center items-center">
       <q-btn v-on:click="$emit('go-to-next-page')" color="primary" class="full-width"
              :label="buttonTitle"/>
     </div>

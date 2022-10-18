@@ -58,6 +58,7 @@
         @go-to-next-page="goToNextPage"
         @swapRelativePositions="featureRelativeSwap"
         @delete="featureDelete"
+        :editFeature="editFeature"
 
     >
 
@@ -71,7 +72,6 @@
       </q-toolbar>
     </q-footer>
   </q-layout>
-  <q-btn @click="deleteDialog('',()=>{})"/>
 </template>
 
 <script>
@@ -82,6 +82,7 @@ import CategoryComponentItem from "@/components/CategoryComponentItem";
 import {useQuasar} from "quasar";
 import DialogueBox from "@/components/DialogueBox/DialogueBox";
 import CategoryInput from "@/components/DialogueBox/CategoryInput";
+import FeatureInput from "@/components/DialogueBox/FeatureInput";
 
 
 const sortByPosition = function (a, b) {
@@ -159,8 +160,21 @@ const undefinedCategory =
       title: "[undefined]",
       position: 0
     }
+const categoryId = {
+  id: 1,
+  next: ()=> {
+    this.id += 1;
+    return this.id
+  }
+}
 
-
+const featureId = {
+  id: 1,
+  next: ()=> {
+    this.id += 1;
+    return this.id
+  }
+}
 const filteredCategoryList = computed(() => categoryList.filter(cat => featureList.some(x => x.category === cat.id)).sort(sortByPosition))
 const filteredFeatureList = computed(() => featureList.sort(sortByPosition))
 
@@ -219,7 +233,6 @@ function swapPositions(itemA, itemB) {
 }
 
 
-
 function reassessPagePositions() {
   if (pageContents.value.length === 0) return
   for (let i = 0; i < pageContents.value.length; i++) {
@@ -227,7 +240,6 @@ function reassessPagePositions() {
     feature.position = i
   }
 }
-
 
 
 export default {
@@ -241,9 +253,7 @@ export default {
     function deleteDialog(itemName, onDelete) {
       $q.dialog({
         component: DialogueBox,
-        componentSlots: {
-
-        },
+        componentSlots: {},
         // props forwarded to your custom component
         componentProps: {
           title: "Delete Confirmation",
@@ -267,7 +277,7 @@ export default {
     }
 
     function categoryDelete(id) {
-      let index = categoryList.map((x)=> x.id).indexOf(id)
+      let index = categoryList.map((x) => x.id).indexOf(id)
 
       deleteDialog(categoryList[index].title, () => {
         categoryList.splice(categoryList.map((x) => x.id).indexOf(id), 1)
@@ -275,28 +285,10 @@ export default {
       })
     }
 
-    // function CategoryInputsDialogue(item, onSave) {
-    //   const isEditing = Boolean(item.id)
-    //   $q.dialog({
-    //     component: CategoryInput,
-    //     // props forwarded to your custom component
-    //     componentProps: {
-    //       title: isEditing ? "Editing " + item.name : "Adding New Category",
-    //       cancelActive: true,
-    //       confirmText: isEditing ? "Save Changes" : "Add Category",
-    //       item: item,
-    //       // ...more..props...
-    //     }
-    //   }).onOk(() => {
-    //     onSave(item)
-    //   })
-    // }
-
-    function saveCategoryChanges(category, newCategory){
+    function saveCategoryChanges(category, newCategory) {
       category.title = newCategory.title
     }
-
-    function editCategory(item){
+    function editCategory(item) {
       const newItem = {title: item.title}
       $q.dialog({
         component: CategoryInput,
@@ -308,6 +300,75 @@ export default {
           confirmText: "Save Changes",
           item: newItem,
           onSave: () => saveCategoryChanges(item, newItem)
+          // ...more..props...
+        },
+      })
+    }
+
+    function saveNewCategory(item){
+      item.id = categoryId.next();
+      item.position = 9999
+      categoryList.push(item);
+      fixCategoryPositions()
+
+    }
+
+    function addCategory() {
+      const newItem = {title: ""}
+      $q.dialog({
+        component: CategoryInput,
+        // props forwarded to your custom component
+
+        componentProps: {
+          title: "Add New Category",
+          cancelActive: true,
+          confirmText: "Add Category",
+          item: newItem,
+          onSave: () => saveNewCategory(newItem)
+          // ...more..props...
+        },
+      })
+    }
+
+    function fixFeaturePositions(categoryId) {
+      const list = featureList.filter(x => x.category === categoryId).sort(sortByPosition)
+      for (let i = 0; i < list.length; i++) {
+        let feature = list[i]
+        feature.position = i
+      }
+    }
+    function fixCategoryPositions() {
+      const list = categoryList.sort(sortByPosition)
+      for (let i = 0; i < list.length; i++) {
+        let feature = list[i]
+        feature.position = i
+      }
+    }
+
+    function saveFeatureChanges(feature, newFeature) {
+      feature.title = newFeature.title
+      feature.description = newFeature.description
+      if (feature.category !== newFeature.category) {
+        feature.category = newFeature.category
+        feature.position = 9999
+        fixFeaturePositions(feature.category)
+        fixFeaturePositions(newFeature.category)
+      }
+    }
+
+    function editFeature(item) {
+      const newItem = {title: item.title, category: item.category, description: item.description}
+      $q.dialog({
+        component: FeatureInput,
+        // props forwarded to your custom component
+
+        componentProps: {
+          title: "Edit Category",
+          cancelActive: true,
+          confirmText: "Save Changes",
+          item: newItem,
+          onSave: () => saveFeatureChanges(item, newItem),
+          categories: categoryList
           // ...more..props...
         },
       })
@@ -360,6 +421,12 @@ export default {
 
       //CategoryInputsDialogue,
       editCategory,
+      editFeature,
+
+      categoryId,
+      featureId,
+
+      addCategory,
     }
 
   },

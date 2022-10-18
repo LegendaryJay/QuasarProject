@@ -5,40 +5,42 @@
       <q-card-section v-if="title">
         <div class="text-h6 text-bold">{{ title }}</div>
       </q-card-section>
+      <!-- eslint-disable -->
+      <q-card-section>
+        <div class="q-py-md">
+          <q-input
+              :model-value="item.title"
+              @update:model-value="(value) => {item.title=value}"
+              label="Title"/>
+        </div>
+        <div class="q-py-md q-pb-xl ">
+          <q-btn-dropdown color="primary" :label="'Category [' + categories?.find(x=> x.id === item.category)?.title + ']'">
+            <q-list>
+              <template v-for="(category, index) in categories" :key="index">
+                <q-item clickable v-close-popup @click="item.category = category.id">
+                  <q-item-section>
+                    <q-item-label :class="category.id === item.category ? 'text-bold' : ''">{{ category.title + (category.id === item.category ? " (Current)" : "") }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-list>
+          </q-btn-dropdown>
+        </div>
 
-      <q-card-section class="text-body2" v-if="message">
-        {{ message }}
+        <div class="q-py-md">
+          <q-input
+              :model-value="item.description"
+              @update:model-value="(value) => {item.description=value}"
+              label="Description"
+              type="textarea"
+              autogrow
+          ></q-input>
+        </div>
+
+
       </q-card-section>
-      <slot></slot>
-
-      <q-card-section v-if="isCategory">
-        <q-input v-model="itemCopy.value.title" @input="handleInput" label="Title" />
-      </q-card-section>
-
-      <!--      <q-card-section v-if="isFeature">-->
-      <!--        <q-input v-model="itemCopy." @input="handleInput" label="Title" />-->
-      <!--        <div class="q-pa-md">-->
-      <!--          <q-btn-dropdown color="primary" label="Dropdown Button">-->
-      <!--            <q-list>-->
-      <!--              <template v-for="(category, index) in categories" :key="index" >-->
-      <!--                <q-item clickable v-close-popup @click="onDropdownSelect(category.id)">-->
-      <!--                  <q-item-section>-->
-      <!--                    <q-item-label>{{category.title}}</q-item-label>-->
-      <!--                  </q-item-section>-->
-      <!--                </q-item>-->
-      <!--              </template>-->
-      <!--            </q-list>-->
-      <!--          </q-btn-dropdown>-->
-      <!--        </div>-->
-
-      <!--        <div class="q-pa-md" style="max-width: 300px">-->
-      <!--          <q-input-->
-      <!--              v-model="text"-->
-      <!--              filled-->
-      <!--              type="textarea"-->
-      <!--          ></q-input>-->
-      <!--        </div>-->
-      <!--      </q-card-section>-->
+      <!-- eslint-enable -->
       <!--
         ...content
         ... use q-card-section for it?
@@ -55,15 +57,10 @@
 
 <script>
 import {useDialogPluginComponent} from 'quasar'
-import {ref} from "vue";
 
 export default {
   props: {
     title: {
-      type: String,
-      default: "",
-    },
-    message: {
       type: String,
       default: "",
     },
@@ -75,18 +72,18 @@ export default {
       type: String,
       default: "OK",
     },
-    isCategory: {
-      type: Boolean,
-      default:false,
-    },
-    isFeature: {
-      type: Boolean,
-      default:false,
-    },
     item: {
       type: Object,
+      required: true,
     },
-    categories: Array,
+    onSave: {
+      type: Function,
+      required: true,
+    },
+    categories: {
+      type: Array,
+      require: true,
+    }
     // ...your custom props
   },
 
@@ -98,16 +95,8 @@ export default {
     ...useDialogPluginComponent.emits
   ],
 
-  setup(props, {emit}) {
+  setup(props) {
 
-    const handleInput = ()=> emit('update:item',itemCopy.value)
-
-    const itemCopy = ref(props.item)
-
-    function onDropdownSelect(id){
-      itemCopy.value.category = id
-      handleInput()
-    }
 
     // REQUIRED; must be called inside of setup()
     const {dialogRef, onDialogHide, onDialogOK, onDialogCancel} = useDialogPluginComponent()
@@ -125,14 +114,11 @@ export default {
       dialogRef,
       onDialogHide,
 
-      itemCopy,
-      handleInput,
-
-      onDropdownSelect,
 
       // other methods that we used in our vue html template;
       // these are part of our example (so not required)
       onOKClick() {
+        props.onSave()
         // on OK, it is REQUIRED to
         // call onDialogOK (with optional payload)
         onDialogOK()
