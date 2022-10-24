@@ -1,5 +1,4 @@
 <script>
-import {computed} from "vue";
 import FeatureComponentItem from "@/components/FeatureComponentItem";
 
 export default {
