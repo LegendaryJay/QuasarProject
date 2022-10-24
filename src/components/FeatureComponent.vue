@@ -10,30 +10,31 @@ export default {
       type: Array,
       required: true,
     },
-    pageCategory: {
+    isLastPage: {
+      type: Boolean,
+      required: true,
+    },
+    nextCategory: {
       type: Object,
       required: true,
     },
-    categories: {
-      type: Array,
-      required: true,
-    },
-    nextPage: {
+    pageCategory: {
       type: Object,
       required: true,
     },
     editFeature: {
       type: Function,
       required: true,
+    },
+    featureController: {
+      type: Object,
+      required: true,
     }
   },
-  emits: ['set-category-page', 'go-to-next-page', 'swapRelativePositions', 'delete'],
-  setup(props) {
-    const buttonTitle = computed(
-        () => typeof props.nextPage === "undefined" ? "Download Now!" : props.nextPage.title
-    )
+  emits: ['swapPositions', 'delete'],
+  setup() {
+
     return {
-      buttonTitle,
     }
   },
 
@@ -47,17 +48,17 @@ export default {
         v-for="(feature, index) in features"
         :key="index"
         :feature="feature"
-        @up="$emit('swapRelativePositions',index, -1)"
-        @down="$emit('swapRelativePositions',index, 1)"
-        @delete="$emit('delete',feature.id)"
+        @up="$emit('swapPositions',feature, features[index - 1])"
+        @down="featureController.swapPositions(feature, features[index + 1])"
+        @delete="$emit('delete',feature)"
         @edit="editFeature(feature)"
         :disable-down="index===(features.length-1)"
         :disable-up="index===0"
     >
     </FeatureComponentItem>
     <div class="q-pa-md text-center row justify-center items-center">
-      <q-btn v-on:click="$emit('go-to-next-page')" color="primary" class="full-width"
-             :label="buttonTitle"/>
+      <q-btn v-on:click="isLastPage ? {} : $emit('go-to-next-page')" color="primary" class="full-width"
+             :label="isLastPage ? 'Download Now' : nextCategory.title"/>
     </div>
   </q-page-container>
 </template>

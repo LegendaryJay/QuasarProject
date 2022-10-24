@@ -19,28 +19,28 @@
     >
       <q-scroll-area style="height: calc(100% - 150px); margin-top: 150px; border-right: 1px solid #ddd">
         <q-list>
-
           <category-component-item
-              v-for="(category, index) in filteredCategoryList"
+              v-for="(category, index) in dataController.categories.usedCategories()"
               :category="category"
               :key="index"
-              :active="category.id === pageCategory.id"
-              @set-category-page="setCategoryPage"
-              @up="categoryRelativeSwap(index, -1)"
-              @down="categoryRelativeSwap(index, 1)"
-              @edit="editCategory(category)"
-              @delete="categoryDelete"
+              :active="category.id === currentCategory.id"
+              @set-category-page="changePageById"
+              @up="() => dataController.categories.swapPositions(category, dataController.categories.usedCategories()[index - 1])"
+              @down="() => dataController.categories.swapPositions(category, dataController.categories.usedCategories()[index + 1])"
+              @edit="editCategory"
+              @delete="removeCategory(category)"
               :disable-up="index === 0"
-              :disable-down="index===(filteredCategoryList.length - 1)"
-          >
-          </category-component-item>
+              :disable-down="index===(dataController.categories.usedCategories().length - 1)"
+          />
+
           <category-component-item
-              v-if="featureList.some(x => x.category === -1)"
-              :category="{title:'[undefined]', id:-1}"
-              :active="-1 === pageCategory.id"
-              @set-category-page="setCategoryPage"
+              v-if="dataController.features.itemsWithoutCategory().length"
+              :category="{title:'[Undefined]', id:-1}"
+              :active=" currentCategory.id === -1"
+              @set-category-page="changePageById(-1)"
           >
           </category-component-item>
+
         </q-list>
       </q-scroll-area>
       <q-img class="absolute-top" src="./assets/tree.jpg" style="height: 150px">
@@ -49,20 +49,17 @@
         </div>
       </q-img>
     </q-drawer>
-
     <FeatureComponent
-        :features="pageContents"
-        :categories="filteredCategoryList"
-        :page-category="pageCategory"
-        :next-page="nextPage"
-        @go-to-next-page="goToNextPage"
-        @swapRelativePositions="featureRelativeSwap"
-        @delete="featureDelete"
+        :features="currentPageContents"
+        :feature-controller="dataController.features"
+        :categories="dataController.categories.items()"
+        :page-category="currentCategory"
+        :next-category="dataController.categories.usedCategories()[RelativePageNumber(1)]"
+        :is-last-page="isLastPage"
+        @go-to-next-page="relativeChangePage(1)"
+        @delete="removeFeature"
         :editFeature="editFeature"
-
-    >
-
-    </FeatureComponent>
+    />
 
     <q-footer elevated class="bg-grey-8 text-white">
       <q-toolbar>
@@ -76,362 +73,222 @@
 
 <script>
 
-import {ref, computed, reactive} from "vue";
+import {computed, ref} from "vue";
 import FeatureComponent from "@/components/FeatureComponent";
-import CategoryComponentItem from "@/components/CategoryComponentItem";
+//import CategoryComponentItem from "@/components/CategoryComponentItem";
 import {useQuasar} from "quasar";
 import DialogueBox from "@/components/DialogueBox/DialogueBox";
 import CategoryInput from "@/components/DialogueBox/CategoryInput";
 import FeatureInput from "@/components/DialogueBox/FeatureInput";
+import {Category, Feature, FeatureDataController} from '@/components/appData'
+import CategoryComponentItem from "@/components/CategoryComponentItem";
 
-
-const sortByPosition = function (a, b) {
-  return a.position - b.position
-}
-
-const featureList = reactive([
-  {
-    title: 'New Challenge to Minecraft!',
-    id: 0,
-    position: 0,
-    category: 0,
-    img: "",
-    description: "You are now a guardian spirit here to watch over a spirit tree! It is your job to care" +
+const dataController = new FeatureDataController()
+dataController.features
+    .add(new Feature(
+        'New Challenge to Minecraft!',
+        "You are now a guardian spirit here to watch over a spirit tree! It is your job to care" +
         " for and grow the spirit tree to becomes a monument amongst trees! \n" +
         "\n" +
         "This mod turns every player into a dryad who, after choosing a tree to protect, binds them to " +
         "the tree. Wandering too far away will deplete a player's air while being close to the tree will " +
-        "fill it back up."
-  },
-  {
-    title: 'Choosing the tree',
-    id: 1,
-    position: 1,
-    category: 0,
-    img: "",
-    description: "When a player joins, they will start in ghost form. In order to get out of ghost form," +
-        "a player must chose a tree by punching it and accepting the chat prompt. " +
-        "\n\n" +
-        "Once chosen, a player is then given a few saplings to start and must then grow the tree by hand."
-  },
-  {
-    title: 'Growing Stick',
-    id: 2,
-    position: 2,
-    category: 2,
-    img: "",
-    description: "To grow the tree, the player must add only logs that are descended from the original" +
-        "tree. Saplings from the player's spirit tree will glow and be specially named. When planted, " +
-        "these trees will produce logs that glow when picked up by the guardian player. " +
-        "\n\n" +
-        "Using logs or saplings from other trees will not grow your spirit tree, though they can be used " +
-        "as decoration. Placed logs that are part of the spirit tree will pulse when holding a Log or " +
-        "sappling from the tree."
-  },
-  {
-    title: 'Home upgrade: Reach',
-    id: 3,
-    position: 0,
-    category: 1,
-    img: "",
-    description: "This upgrade allows a player to go farther from the tree by two blocks per level." +
-        "\n\n" +
-        "Requirements: A tree must have at least 200 blocks for this upgrade to unlock. It costs one enderpearl," +
-        "one magmablock, and 10 experience levels per upgrade with a max of 3 upgrades"
-  },
-])
+        "fill it back up.",
+        0,
+        0,
+        0,
+    ))
+    .add(
+        new Feature(
+            'Choosing the tree',
+            "When a player joins, they will start in ghost form. In order to get out of ghost form," +
+            "a player must chose a tree by punching it and accepting the chat prompt. " +
+            "\n\n" +
+            "Once chosen, a player is then given a few saplings to start and must then grow the tree by hand.",
+            0,
+            1,
+            1,
+        )
+    )
+    .add(
+        new Feature(
+            'Growing Stick',
+            "To grow the tree, the player must add only logs that are descended from the original" +
+            "tree. Saplings from the player's spirit tree will glow and be specially named. When planted, " +
+            "these trees will produce logs that glow when picked up by the guardian player. " +
+            "\n\n" +
+            "Using logs or saplings from other trees will not grow your spirit tree, though they can be used " +
+            "as decoration. Placed logs that are part of the spirit tree will pulse when holding a Log or " +
+            "sappling from the tree.",
+            2,
+            2,
+            2,
+        )
+    )
+    .add(
+        new Feature(
+            'Home upgrade: Reach',
+            "This upgrade allows a player to go farther from the tree by two blocks per level." +
+            "\n\n" +
+            "Requirements: A tree must have at least 200 blocks for this upgrade to unlock. It costs one enderpearl," +
+            "one magmablock, and 10 experience levels per upgrade with a max of 3 upgrades",
+            1,
+            3,
+            0,
+        )
+    )
 
-const categoryList = reactive([
-  {
-    id: 0,
-    title: 'Core Gameplay',
-    position: 0
-  },
-  {
-    id: 1,
-    title: 'Upgrades',
-    position: 1
-  },
-])
+dataController.categories
+    .add(
+        new Category(
+            'Core Gameplay',
+            0,
+            0,
+        )
+    )
+    .add(
+        new Category(
+            'Upgrades',
+            1,
+            1,
+        )
+    )
+const usedCategories = computed(() => dataController.categories.usedCategories())
+const index = ref(0)
+const isLastPage = computed(() => index.value === (usedCategories.value.length - 1))
 
-const undefinedCategory =
-    {
-      id: -1,
-      title: "[undefined]",
-      position: 0
-    }
-const categoryId = {
-  id: 1,
-  next: ()=> {
-    this.id += 1;
-    return this.id
+
+const clampPage = function (value) {
+  return Math.min(Math.max(value, -1), usedCategories.value.length - 1)
+}
+const RelativePageNumber = function (offsetAmount) {
+  return clampPage(index.value + offsetAmount)
+}
+const indexToCategory = function (i) {
+  return i > -1 ? usedCategories.value[clampPage(i)] : {
+    id: -1,
+    title: '[undefined]'
   }
 }
-
-const featureId = {
-  id: 1,
-  next: ()=> {
-    this.id += 1;
-    return this.id
-  }
+const relativeChangePage = function (changeAmount) {
+  index.value = clampPage(index.value + changeAmount)
 }
-const filteredCategoryList = computed(() => categoryList.filter(cat => featureList.some(x => x.category === cat.id)).sort(sortByPosition))
-const filteredFeatureList = computed(() => featureList.sort(sortByPosition))
-
-const relativePageNumber = ref(0)
-
-function getPageCategory(pageIndex) {
-  if (pageIndex >= filteredCategoryList.value.length) {
-    return {id: -100, title: "Download Now!"}
-  } else if (pageIndex < 0) {
-    return undefinedCategory
-  }
-  return filteredCategoryList.value[pageIndex]
+const changePageById = function (id) {
+  index.value = (id === -1 ? -1 : usedCategories.value.map(category => category.id).indexOf(id))
+}
+const pageContents = function (index) {
+  return index !== -1 ? dataController.features.itemsByCategory(indexToCategory(index).id) : dataController.features.itemsWithoutCategory()
 }
 
-const pageCategory = computed(() => getPageCategory(relativePageNumber.value))
-
-const pageContents = computed(() => filteredFeatureList.value.filter(x => x.category === pageCategory.value.id))
-
-
-function setHomelessToUndefined() {
-  featureList.filter(x => categoryList.map(cat => cat.id).indexOf(x.category) === -1).forEach(feat => feat.category = -1);
-}
-
-const nextPage = computed(
-    () => getPageCategory(relativePageNumber.value + 1)
-)
-
-function setCategoryPage(pageIndex) {
-  relativePageNumber.value = pageIndex
-}
-
-function goToNextPage() {
-  if (nextPage.value.id === -100) {
-    alert("Downloading...")
-  } else {
-    setCategoryPage(relativePageNumber.value + 1)
-  }
-}
-
-function featureRelativeSwap(index, offset) {
-  let itemA = pageContents.value[index]
-  let itemB = pageContents.value[index + offset]
-  swapPositions(itemA, itemB)
-}
-
-function categoryRelativeSwap(index, offset) {
-  let itemA = filteredCategoryList.value[index]
-  let itemB = filteredCategoryList.value[index + offset]
-  swapPositions(itemA, itemB)
-}
-
-function swapPositions(itemA, itemB) {
-  let tempA = itemA.position
-  itemA.position = itemB.position
-  itemB.position = tempA
-}
-
-
-function reassessPagePositions() {
-  if (pageContents.value.length === 0) return
-  for (let i = 0; i < pageContents.value.length; i++) {
-    const feature = pageContents.value[i]
-    feature.position = i
-  }
-}
-
+const currentCategory = computed(() => indexToCategory(index.value))
+const currentPageContents = computed(() => pageContents(index.value))
 
 export default {
   components: {
-    CategoryComponentItem,
     FeatureComponent,
+    CategoryComponentItem
+    //FeatureComponent,
+  },
+  mounted() {
   },
   setup() {
     const $q = useQuasar()
 
-    function deleteDialog(itemName, onDelete) {
+    function generalRemove(item, controllerSource) {
       $q.dialog({
         component: DialogueBox,
-        componentSlots: {},
-        // props forwarded to your custom component
         componentProps: {
           title: "Delete Confirmation",
-          message: 'Are you sure that you want to delete "' + itemName + '"?',
+          message: 'Are you sure that you want to delete "' + item.title + '"?',
           cancelActive: true,
           confirmText: "Delete"
-          // ...more..props...
         }
       }).onOk(() => {
-        onDelete()
+        controllerSource.remove(item)
       })
     }
 
-    function featureDelete(id) {
-      let index = featureList.map((x) => x.id).indexOf(id)
-
-      deleteDialog(featureList[index].title, () => {
-        featureList.splice(index, 1);
-        reassessPagePositions();
-      })
+    function removeFeature(item) {
+      generalRemove(item, dataController.features)
     }
 
-    function categoryDelete(id) {
-      let index = categoryList.map((x) => x.id).indexOf(id)
-
-      deleteDialog(categoryList[index].title, () => {
-        categoryList.splice(categoryList.map((x) => x.id).indexOf(id), 1)
-        setHomelessToUndefined()
-      })
+    function removeCategory(item) {
+      generalRemove(item, dataController.categories)
     }
 
-    function saveCategoryChanges(category, newCategory) {
-      category.title = newCategory.title
-    }
-    function editCategory(item) {
-      const newItem = {title: item.title}
+    //////////////////////////////////////////
+
+    function generalEdit(item, component, controllerSource) {
+      const newItem = {...item}
       $q.dialog({
-        component: CategoryInput,
-        // props forwarded to your custom component
-
+        component: component,
         componentProps: {
-          title: "Edit Category",
+          title: "Edit " + item.type,
           cancelActive: true,
           confirmText: "Save Changes",
           item: newItem,
-          onSave: () => saveCategoryChanges(item, newItem)
-          // ...more..props...
-        },
+          onSave: () => controllerSource.save(item, newItem),
+          categories: dataController.categories.items(),
+        }
       })
-    }
-
-    function saveNewCategory(item){
-      item.id = categoryId.next();
-      item.position = 9999
-      categoryList.push(item);
-      fixCategoryPositions()
-
-    }
-
-    function addCategory() {
-      const newItem = {title: ""}
-      $q.dialog({
-        component: CategoryInput,
-        // props forwarded to your custom component
-
-        componentProps: {
-          title: "Add New Category",
-          cancelActive: true,
-          confirmText: "Add Category",
-          item: newItem,
-          onSave: () => saveNewCategory(newItem)
-          // ...more..props...
-        },
-      })
-    }
-
-    function fixFeaturePositions(categoryId) {
-      const list = featureList.filter(x => x.category === categoryId).sort(sortByPosition)
-      for (let i = 0; i < list.length; i++) {
-        let feature = list[i]
-        feature.position = i
-      }
-    }
-    function fixCategoryPositions() {
-      const list = categoryList.sort(sortByPosition)
-      for (let i = 0; i < list.length; i++) {
-        let feature = list[i]
-        feature.position = i
-      }
-    }
-
-    function saveFeatureChanges(feature, newFeature) {
-      feature.title = newFeature.title
-      feature.description = newFeature.description
-      if (feature.category !== newFeature.category) {
-        feature.category = newFeature.category
-        feature.position = 9999
-        fixFeaturePositions(feature.category)
-        fixFeaturePositions(newFeature.category)
-      }
     }
 
     function editFeature(item) {
-      const newItem = {title: item.title, category: item.category, description: item.description}
-      $q.dialog({
-        component: FeatureInput,
-        // props forwarded to your custom component
+      generalEdit(item, FeatureInput, dataController.features)
+    }
 
+    function editCategory(item) {
+      alert("edit " + item)
+      generalEdit(item, CategoryInput, dataController.categories)
+    }
+
+    //////////////////////////////////////////
+
+    function generalAdd(item, component, controllerSource) {
+      $q.dialog({
+        component: component,
         componentProps: {
-          title: "Edit Category",
+          title: "Add New " + item.type,
           cancelActive: true,
-          confirmText: "Save Changes",
-          item: newItem,
-          onSave: () => saveFeatureChanges(item, newItem),
-          categories: categoryList
-          // ...more..props...
-        },
+          confirmText: "Save " + item.type,
+          item: item,
+          onSave: () => controllerSource.add(item),
+          categories: dataController.categories.items(),
+        }
       })
     }
 
-    //
-    // function test() {
-    //   $q.dialog({
-    //     component: DialogueBox,
-    //
-    //     // props forwarded to your custom component
-    //     componentProps: {
-    //       title: "thing",
-    //       message: 'something',
-    //       // ...more..props...
-    //     }
-    //   }).onOk(() => {
-    //     console.log('OK')
-    //   }).onCancel(() => {
-    //     console.log('Cancel')
-    //   }).onDismiss(() => {
-    //     console.log('Called on OK or Cancel')
-    //   })
-    // }
+    function addFeature() {
+      generalAdd(new Feature(), FeatureComponent, dataController.features)
+    }
+
+    function addCategory() {
+      generalAdd(new Feature(), CategoryInput, dataController.categories)
+    }
 
     return {
-      categoryList,
-      featureList,
+      dataController,
 
-      filteredCategoryList,
-      filteredFeatureList,
-      relativePageNumber,
+      index,
+      isLastPage,
+      clampPage,
+      RelativePageNumber,
+      indexToCategory,
+      relativeChangePage,
+      changePageById,
       pageContents,
 
 
-      nextPage,
-      pageCategory,
+      currentCategory,
+      currentPageContents,
 
-      undefinedCategory,
-
-
-      setCategoryPage,
-      goToNextPage,
-
-      featureRelativeSwap,
-      featureDelete,
-
-      categoryRelativeSwap,
-      categoryDelete,
-
-      //CategoryInputsDialogue,
       editCategory,
-      editFeature,
-
-      categoryId,
-      featureId,
-
       addCategory,
-    }
+      removeCategory,
 
-  },
-  mounted() {
-    setHomelessToUndefined()
+      editFeature,
+      addFeature,
+      removeFeature,
+    }
   },
 }
 </script>

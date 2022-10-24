@@ -1,9 +1,7 @@
 <script>
 import EditExtendo from "@/components/EditExtendo";
-
 export default {
   components: {EditExtendo},
-
   props: {
     category: {
       type: Object,
@@ -15,12 +13,9 @@ export default {
   },
   emits: ['set-category-page', 'up', 'down', 'delete', "edit"],
   setup() {
-
     return {
     }
   },
-
-
 }
 </script>
 
@@ -33,8 +28,8 @@ export default {
         v-if="category.id !== -1"
         @up="$emit('up')"
         @down="$emit('down')"
-        @edit="$emit('edit')"
-        @delete="$emit('delete', category.id)"
+        @edit="$emit('edit', category)"
+        @delete="$emit('delete', category)"
         :disable-down="disableDown"
         :disable-up="disableUp"
     />

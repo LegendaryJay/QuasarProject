@@ -14,12 +14,12 @@
               label="Title"/>
         </div>
         <div class="q-py-md q-pb-xl ">
-          <q-btn-dropdown color="primary" :label="'Category [' + categories?.find(x=> x.id === item.category)?.title + ']'">
+          <q-btn-dropdown color="primary" :label="'Category [' + itemCategory.title + ']'">
             <q-list>
               <template v-for="(category, index) in categories" :key="index">
-                <q-item clickable v-close-popup @click="item.category = category.id">
+                <q-item clickable v-close-popup @click="item.categoryId = category.id">
                   <q-item-section>
-                    <q-item-label :class="category.id === item.category ? 'text-bold' : ''">{{ category.title + (category.id === item.category ? " (Current)" : "") }}
+                    <q-item-label :class="category.id === item.categoryId ? 'text-bold' : ''">{{ category.title + (category.id === item.categoryId ? " (Current)" : "") }}
                     </q-item-label>
                   </q-item-section>
                 </q-item>
@@ -57,6 +57,7 @@
 
 <script>
 import {useDialogPluginComponent} from 'quasar'
+import {computed} from "vue";
 
 export default {
   props: {
@@ -97,6 +98,7 @@ export default {
 
   setup(props) {
 
+    const itemCategory = computed( () => props.categories?.find(x=> x.id === props.item.categoryId) )
 
     // REQUIRED; must be called inside of setup()
     const {dialogRef, onDialogHide, onDialogOK, onDialogCancel} = useDialogPluginComponent()
@@ -113,12 +115,13 @@ export default {
       // into the vue scope for the vue html template
       dialogRef,
       onDialogHide,
-
+      itemCategory,
 
       // other methods that we used in our vue html template;
       // these are part of our example (so not required)
       onOKClick() {
-        props.onSave()
+        props.onSave(),
+
         // on OK, it is REQUIRED to
         // call onDialogOK (with optional payload)
         onDialogOK()
