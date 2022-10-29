@@ -28,13 +28,12 @@
               :index = index
               :page-info="pageInfo"
               :edit-commands="dialogController"
-              @swap="(a, b) => dataController.categories.swapItems(a, b)"
+              @swap="(a, b) => dataController.categories.swapItemsByIndex(a, b)"
           />
 
           <category-component-item
               v-if="dataController.features.itemsWithoutCategory().length"
               :page-info="pageInfo"
-              @swap="dataController.categories.swapItems"
 
               :category="{title:'[Undefined]', id:-1}"
           >
@@ -49,21 +48,9 @@
       </q-img>
     </q-drawer>
     <FeatureComponent
-        :page-index="pageInfo"
+        :page-info="pageInfo"
         :edit-commands="dialogController"
-        @swap="dataController.features.swapItems"
-
-        :dataController="dataController"
-        :features="pageInfo.currentPageContents.value"
-        :page-category="pageInfo.currentCategory.value"
-        :next-category="pageInfo.indexToCategory(pageInfo.index.value + 1)"
-        :is-last-page="pageInfo.isLastPage.value"
-        @go-to-next-page="pageInfo.changePage(pageInfo.index.value + 1)"
-
-        :feature-controller="dataController.features"
-        :categories="dataController.categories.items()"
-        @delete="dialogController.remove"
-        :editFeature="dialogController.edit"
+        @swap="(a, b) => dataController.features.swapItems(a, b)"
     />
 
     <q-footer elevated class="bg-grey-8 text-white">
@@ -208,7 +195,6 @@ export default {
     const dialogController = new DialogController()
 
     const PageInfo = function () {
-
       //Pages
       this.pages = computed(() => dataController.categories.usedCategories())
       this.pageCount = computed(() => this.pages.value.length)
@@ -220,9 +206,6 @@ export default {
       this.isLastPage = computed(() => this.index.value === (this.pageCount.value - 1))
 
       //Change Page
-      this.relativeChangePage = function (offset) {
-        this.index.value += offset
-      }
       this.changePage = function (page) {
         this.index.value = page
       }

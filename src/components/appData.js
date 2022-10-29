@@ -52,17 +52,21 @@ export function GeneralCollection() {
      * @deprecated since version 2.0
      */
     this.swapPositions = function (itemA, itemB) {
-        this.swapItems(this._arr.indexOf(itemA),this._arr.indexOf(itemB))
+        this.swapItemsByIndex(this._arr.indexOf(itemA),this._arr.indexOf(itemB))
 
         return this;
     }
 
     //Position shifts
-    this.swapItems = function (indexA, indexB){
+    this.swapItemsByIndex = function (indexA, indexB){
         this._arr.splice(indexA, 1, this._arr.splice(indexB, 1, this._arr[indexA])[0])
 
         return this
-
+    }
+    this.swapItems = function (itemA, itemB){
+        let indexA = this.indexOf(itemA)
+        let indexB = this.indexOf(itemB)
+        return this.swapItemsByIndex(indexA, indexB)
     }
 
     this.moveItem = function (itemIndex, targetIndex){
