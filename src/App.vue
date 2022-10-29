@@ -1,4 +1,5 @@
--<template>
+-
+<template>
   <q-layout view="hhh LpR fff">
 
     <q-header elevated class="bg-primary text-white">
@@ -20,24 +21,24 @@
       <q-scroll-area style="height: calc(100% - 150px); margin-top: 150px; border-right: 1px solid #ddd">
         <q-list>
           <category-component-item
-              v-for="(category, index) in dataController.categories.usedCategories()"
+              v-for="(category, index) in pageInfo.pages.value"
               :category="category"
               :key="index"
-              :active="category.id === currentCategory.id"
-              @set-category-page="changePageById"
-              @up="() => dataController.categories.swapPositions(category, dataController.categories.usedCategories()[index - 1])"
-              @down="() => dataController.categories.swapPositions(category, dataController.categories.usedCategories()[index + 1])"
-              @edit="editCategory"
-              @delete="removeCategory(category)"
+              :active="index === pageInfo.index.value"
+              @set-category-page="pageInfo.changePage(index)"
+              @up="() => dataController.categories.swapItems(index, index - 1)"
+              @down="() => dataController.categories.swapItems(index, index + 1)"
+              @edit="dialogController.edit"
+              @delete="dialogController.remove"
               :disable-up="index === 0"
-              :disable-down="index===(dataController.categories.usedCategories().length - 1)"
+              :disable-down="index===(pageInfo.pageCount - 1)"
           />
 
           <category-component-item
               v-if="dataController.features.itemsWithoutCategory().length"
               :category="{title:'[Undefined]', id:-1}"
-              :active=" currentCategory.id === -1"
-              @set-category-page="changePageById(-1)"
+              :active=" pageInfo.index.value === -1"
+              @set-category-page="pageInfo.changePage(-1)"
           >
           </category-component-item>
 
@@ -50,15 +51,15 @@
       </q-img>
     </q-drawer>
     <FeatureComponent
-        :features="currentPageContents"
+        :features="pageInfo.currentPageContents.value"
         :feature-controller="dataController.features"
         :categories="dataController.categories.items()"
-        :page-category="currentCategory"
-        :next-category="dataController.categories.usedCategories()[RelativePageNumber(1)]"
-        :is-last-page="isLastPage"
-        @go-to-next-page="relativeChangePage(1)"
-        @delete="removeFeature"
-        :editFeature="editFeature"
+        :page-category="pageInfo.currentCategory.value"
+        :next-category="pageInfo.indexToCategory(pageInfo.index.value + 1)"
+        :is-last-page="pageInfo.isLastPage.value"
+        @go-to-next-page="pageInfo.changePage(pageInfo.index.value + 1)"
+        @delete="dialogController.remove"
+        :editFeature="dialogController.edit"
     />
 
     <q-footer elevated class="bg-grey-8 text-white">
@@ -75,12 +76,11 @@
 
 import {computed, ref} from "vue";
 import FeatureComponent from "@/components/FeatureComponent";
-//import CategoryComponentItem from "@/components/CategoryComponentItem";
 import {useQuasar} from "quasar";
 import DialogueBox from "@/components/DialogueBox/DialogueBox";
 import CategoryInput from "@/components/DialogueBox/CategoryInput";
 import FeatureInput from "@/components/DialogueBox/FeatureInput";
-import {Category, Feature, FeatureDataController} from '@/components/appData'
+import {Category, ELEMENT_TYPE, Feature, FeatureDataController} from '@/components/appData'
 import CategoryComponentItem from "@/components/CategoryComponentItem";
 
 const dataController = new FeatureDataController()
@@ -152,35 +152,17 @@ dataController.categories
             1,
         )
     )
-const usedCategories = computed(() => dataController.categories.usedCategories())
-const index = ref(0)
-const isLastPage = computed(() => index.value === (usedCategories.value.length - 1))
 
-
-const clampPage = function (value) {
-  return Math.min(Math.max(value, -1), usedCategories.value.length - 1)
+const typeDirector = {}
+typeDirector[ELEMENT_TYPE.CATEGORY] = {
+  controller: dataController.categories,
+  component: CategoryInput
 }
-const RelativePageNumber = function (offsetAmount) {
-  return clampPage(index.value + offsetAmount)
-}
-const indexToCategory = function (i) {
-  return i > -1 ? usedCategories.value[clampPage(i)] : {
-    id: -1,
-    title: '[undefined]'
-  }
-}
-const relativeChangePage = function (changeAmount) {
-  index.value = clampPage(index.value + changeAmount)
-}
-const changePageById = function (id) {
-  index.value = (id === -1 ? -1 : usedCategories.value.map(category => category.id).indexOf(id))
-}
-const pageContents = function (index) {
-  return index !== -1 ? dataController.features.itemsByCategory(indexToCategory(index).id) : dataController.features.itemsWithoutCategory()
+typeDirector[ELEMENT_TYPE.FEATURE] = {
+  controller: dataController.features,
+  component: FeatureInput
 }
 
-const currentCategory = computed(() => indexToCategory(index.value))
-const currentPageContents = computed(() => pageContents(index.value))
 
 export default {
   components: {
@@ -191,103 +173,99 @@ export default {
   mounted() {
   },
   setup() {
-    const $q = useQuasar()
+    const DialogController = function () {
+      const $q = useQuasar()
+      this.remove = function (item) {
+        $q.dialog({
+          component: DialogueBox,
+          componentProps: {
+            title: "Delete Confirmation",
+            message: 'Are you sure that you want to delete "' + item.title + '"?',
+            cancelActive: true,
+            confirmText: "Delete"
+          }
+        }).onOk(() => {
+          typeDirector[item.type].controller.remove(item)
+        })
+      }
 
-    function generalRemove(item, controllerSource) {
-      $q.dialog({
-        component: DialogueBox,
-        componentProps: {
-          title: "Delete Confirmation",
-          message: 'Are you sure that you want to delete "' + item.title + '"?',
-          cancelActive: true,
-          confirmText: "Delete"
-        }
-      }).onOk(() => {
-        controllerSource.remove(item)
-      })
+      this.edit = function (item) {
+        const newItem = {...item}
+        $q.dialog({
+          component: typeDirector[item.type].component,
+          componentProps: {
+            title: "Edit " + item.type,
+            cancelActive: true,
+            confirmText: "Save Changes",
+            item: newItem,
+            onSave: () => typeDirector[item.type].controller.save(item, newItem),
+            categories: dataController.categories.items(),
+          }
+        })
+      }
+
+      this.add = function (item) {
+        $q.dialog({
+          component: typeDirector[item.type].component,
+          componentProps: {
+            title: "Add New " + item.type,
+            cancelActive: true,
+            confirmText: "Save " + item.type,
+            item: item,
+            onSave: () => typeDirector[item.type].controller.add(item),
+            categories: dataController.categories.items(),
+          }
+        })
+      }
     }
+    const dialogController = new DialogController()
 
-    function removeFeature(item) {
-      generalRemove(item, dataController.features)
+    const PageInfo = function () {
+
+      //Pages
+      this.pages = computed(() => dataController.categories.usedCategories())
+      this.pageCount = computed(() => this.pages.value.length)
+
+      //Current Page
+      this.index = ref(0)
+      this.currentCategory = computed(() => this.indexToCategory(this.index.value))
+      this.currentPageContents = computed(() => this.pageContents(this.index.value))
+      this.isLastPage = computed(() =>  this.index.value === (this.pageCount.value - 1))
+
+      //Change Page
+      this.relativeChangePage = function (offset) {
+        this.index.value += offset
+      }
+      this.changePage = function (page) {
+        this.index.value = page
+      }
+      this.changePageById = function (id) {
+        let category = this.pages.value.find(category => category.id === id)
+        this.index.value = this.pages.value.indexOf(category)
+      }
+
+      //Main methods
+      this.indexToCategory = function (i) {
+        return i > -1 ? this.pages.value[i] : dataController.defaultCategory
+      }
+      this.pageContents = (index) => {
+        return index !== -1 ? dataController.features.itemsByCategory(this.indexToCategory(index).id) : dataController.features.itemsWithoutCategory()
+      }
+
+      //clamp
+      this.clampToPage = (value) => {
+        return Math.min(Math.max(value, -1), this.pageCount.value - 1)
+      }
+
     }
-
-    function removeCategory(item) {
-      generalRemove(item, dataController.categories)
-    }
-
-    //////////////////////////////////////////
-
-    function generalEdit(item, component, controllerSource) {
-      const newItem = {...item}
-      $q.dialog({
-        component: component,
-        componentProps: {
-          title: "Edit " + item.type,
-          cancelActive: true,
-          confirmText: "Save Changes",
-          item: newItem,
-          onSave: () => controllerSource.save(item, newItem),
-          categories: dataController.categories.items(),
-        }
-      })
-    }
-
-    function editFeature(item) {
-      generalEdit(item, FeatureInput, dataController.features)
-    }
-
-    function editCategory(item) {
-      alert("edit " + item)
-      generalEdit(item, CategoryInput, dataController.categories)
-    }
-
-    //////////////////////////////////////////
-
-    function generalAdd(item, component, controllerSource) {
-      $q.dialog({
-        component: component,
-        componentProps: {
-          title: "Add New " + item.type,
-          cancelActive: true,
-          confirmText: "Save " + item.type,
-          item: item,
-          onSave: () => controllerSource.add(item),
-          categories: dataController.categories.items(),
-        }
-      })
-    }
-
-    function addFeature() {
-      generalAdd(new Feature(), FeatureComponent, dataController.features)
-    }
-
-    function addCategory() {
-      generalAdd(new Feature(), CategoryInput, dataController.categories)
-    }
+    const pageInfo = new PageInfo()
 
     return {
       dataController,
 
-      index,
-      isLastPage,
-      clampPage,
-      RelativePageNumber,
-      indexToCategory,
-      relativeChangePage,
-      changePageById,
-      pageContents,
-
-
-      currentCategory,
-      currentPageContents,
-
-      editCategory,
-      addCategory,
-      removeCategory,
-
-      editFeature,
-      addFeature,
-      removeFeature,
+      typeDirector,
+      dialogController,
+      pageInfo,
     }
   },
 }

@@ -44,6 +44,10 @@ export function GeneralCollection() {
         return this._arr.find(item => item.id === id)
     }
 
+    this.indexOf = function (item){
+        return this._arr.indexOf(item)
+    }
+
     /**
      * @deprecated since version 2.0
      */
@@ -133,7 +137,7 @@ export function FeatureDataController() {
         return this.features.items()
             .filter(//for each feature
                 feature => //does it have a category?
-                    this.categories.items()
+                    !this.categories.items()
                         .some(category => {
                             return feature.categoryId === category?.id
                         }))
@@ -142,14 +146,11 @@ export function FeatureDataController() {
     this.categories['usedCategories'] = () => this.categories.items()
         .filter(category => this.features.items().some(feature => feature.categoryId === category.id))
 
-    this.categories['remove'] = () => {
-        const cached_function = this.categories.remove;
-        const removeCategoryFromFeatures = (categoryId) => this.features.items().filter(feature => feature.categoryId === categoryId)
-            .forEach(feature => feature.categoryId = -1);
+    const oldCatRemove = this.categories.remove
+    this.categories.remove = (item) => {
+        oldCatRemove.apply(this.categories, arguments)
+        this.features.itemsWithoutCategory().forEach(feature => feature.categoryId = -1);
 
-        return function (item) {
-            removeCategoryFromFeatures(item.id)
-            return cached_function.apply(this, arguments);
-        }()
+
     }
 }

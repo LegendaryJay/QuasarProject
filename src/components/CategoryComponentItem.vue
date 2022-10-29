@@ -20,7 +20,7 @@ export default {
 </script>
 
 <template>
-  <q-item v-on:click="$emit('set-category-page', category.id)" clickable :active="active" v-ripple>
+  <q-item v-on:click="$emit('set-category-page')" clickable :active="active" v-ripple>
     <q-item-section :id="category.id">
       {{ category.title }}
     </q-item-section>

@@ -30,7 +30,7 @@ export default {
       required: true,
     }
   },
-  emits: ['swapPositions', 'delete'],
+  emits: ['delete'],
   setup() {
 
     return {
@@ -47,8 +47,8 @@ export default {
         v-for="(feature, index) in features"
         :key="index"
         :feature="feature"
-        @up="$emit('swapPositions',feature, features[index - 1])"
-        @down="featureController.swapPositions(feature, features[index + 1])"
+        @up="featureController.swapItems(index, featureController.indexOf(features[index - 1]))"
+        @down="featureController.swapItems(index, featureController.indexOf(features[index + 1]))"
         @delete="$emit('delete',feature)"
         @edit="editFeature(feature)"
         :disable-down="index===(features.length-1)"

@@ -14,7 +14,7 @@
               label="Title"/>
         </div>
         <div class="q-py-md q-pb-xl ">
-          <q-btn-dropdown color="primary" :label="'Category [' + itemCategory.title + ']'">
+          <q-btn-dropdown color="primary" :label="'Category [' + itemCategory?.title + ']'">
             <q-list>
               <template v-for="(category, index) in categories" :key="index">
                 <q-item clickable v-close-popup @click="item.categoryId = category.id">
