@@ -5,6 +5,14 @@ export default {
   components: {FeatureComponentItem},
 
   props: {
+    // pageInfo: {
+    //   type: Object,
+    //   required: true
+    // },
+
+
+
+
     features: {
       type: Array,
       required: true,

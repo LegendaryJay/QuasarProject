@@ -24,21 +24,19 @@
               v-for="(category, index) in pageInfo.pages.value"
               :category="category"
               :key="index"
-              :active="index === pageInfo.index.value"
-              @set-category-page="pageInfo.changePage(index)"
-              @up="() => dataController.categories.swapItems(index, index - 1)"
-              @down="() => dataController.categories.swapItems(index, index + 1)"
-              @edit="dialogController.edit"
-              @delete="dialogController.remove"
-              :disable-up="index === 0"
-              :disable-down="index===(pageInfo.pageCount - 1)"
+
+              :index = index
+              :page-info="pageInfo"
+              :edit-commands="dialogController"
+              @swap="(a, b) => dataController.categories.swapItems(a, b)"
           />
 
           <category-component-item
               v-if="dataController.features.itemsWithoutCategory().length"
+              :page-info="pageInfo"
+              @swap="dataController.categories.swapItems"
+
               :category="{title:'[Undefined]', id:-1}"
-              :active=" pageInfo.index.value === -1"
-              @set-category-page="pageInfo.changePage(-1)"
           >
           </category-component-item>
 
@@ -51,13 +49,19 @@
       </q-img>
     </q-drawer>
     <FeatureComponent
+        :page-index="pageInfo"
+        :edit-commands="dialogController"
+        @swap="dataController.features.swapItems"
+
+        :dataController="dataController"
         :features="pageInfo.currentPageContents.value"
-        :feature-controller="dataController.features"
-        :categories="dataController.categories.items()"
         :page-category="pageInfo.currentCategory.value"
         :next-category="pageInfo.indexToCategory(pageInfo.index.value + 1)"
         :is-last-page="pageInfo.isLastPage.value"
         @go-to-next-page="pageInfo.changePage(pageInfo.index.value + 1)"
+
+        :feature-controller="dataController.features"
+        :categories="dataController.categories.items()"
         @delete="dialogController.remove"
         :editFeature="dialogController.edit"
     />
@@ -80,12 +84,12 @@ import {useQuasar} from "quasar";
 import DialogueBox from "@/components/DialogueBox/DialogueBox";
 import CategoryInput from "@/components/DialogueBox/CategoryInput";
 import FeatureInput from "@/components/DialogueBox/FeatureInput";
-import {Category, ELEMENT_TYPE, Feature, FeatureDataController} from '@/components/appData'
+import {ELEMENT_TYPE, FeatureDataController} from '@/components/appData'
 import CategoryComponentItem from "@/components/CategoryComponentItem";
 
 const dataController = new FeatureDataController()
 dataController.features
-    .add(new Feature(
+    .create(
         'New Challenge to Minecraft!',
         "You are now a guardian spirit here to watch over a spirit tree! It is your job to care" +
         " for and grow the spirit tree to becomes a monument amongst trees! \n" +
@@ -95,62 +99,47 @@ dataController.features
         "fill it back up.",
         0,
         0,
+    )
+    .create(
+        'Choosing the tree',
+        "When a player joins, they will start in ghost form. In order to get out of ghost form," +
+        "a player must chose a tree by punching it and accepting the chat prompt. " +
+        "\n\n" +
+        "Once chosen, a player is then given a few saplings to start and must then grow the tree by hand.",
         0,
-    ))
-    .add(
-        new Feature(
-            'Choosing the tree',
-            "When a player joins, they will start in ghost form. In order to get out of ghost form," +
-            "a player must chose a tree by punching it and accepting the chat prompt. " +
-            "\n\n" +
-            "Once chosen, a player is then given a few saplings to start and must then grow the tree by hand.",
-            0,
-            1,
-            1,
-        )
+        1,
     )
-    .add(
-        new Feature(
-            'Growing Stick',
-            "To grow the tree, the player must add only logs that are descended from the original" +
-            "tree. Saplings from the player's spirit tree will glow and be specially named. When planted, " +
-            "these trees will produce logs that glow when picked up by the guardian player. " +
-            "\n\n" +
-            "Using logs or saplings from other trees will not grow your spirit tree, though they can be used " +
-            "as decoration. Placed logs that are part of the spirit tree will pulse when holding a Log or " +
-            "sappling from the tree.",
-            2,
-            2,
-            2,
-        )
+    .create(
+        'Growing Stick',
+        "To grow the tree, the player must add only logs that are descended from the original" +
+        "tree. Saplings from the player's spirit tree will glow and be specially named. When planted, " +
+        "these trees will produce logs that glow when picked up by the guardian player. " +
+        "\n\n" +
+        "Using logs or saplings from other trees will not grow your spirit tree, though they can be used " +
+        "as decoration. Placed logs that are part of the spirit tree will pulse when holding a Log or " +
+        "sappling from the tree.",
+        2,
+        2,
     )
-    .add(
-        new Feature(
-            'Home upgrade: Reach',
-            "This upgrade allows a player to go farther from the tree by two blocks per level." +
-            "\n\n" +
-            "Requirements: A tree must have at least 200 blocks for this upgrade to unlock. It costs one enderpearl," +
-            "one magmablock, and 10 experience levels per upgrade with a max of 3 upgrades",
-            1,
-            3,
-            0,
-        )
+    .create(
+        'Home upgrade: Reach',
+        "This upgrade allows a player to go farther from the tree by two blocks per level." +
+        "\n\n" +
+        "Requirements: A tree must have at least 200 blocks for this upgrade to unlock. It costs one enderpearl," +
+        "one magmablock, and 10 experience levels per upgrade with a max of 3 upgrades",
+        1,
+        3,
     )
 
 dataController.categories
-    .add(
-        new Category(
-            'Core Gameplay',
-            0,
-            0,
-        )
+    .create(
+        'Core Gameplay',
+        0,
     )
-    .add(
-        new Category(
-            'Upgrades',
-            1,
-            1,
-        )
+    .create(
+        'Upgrades',
+        1,
+        1,
     )
 
 const typeDirector = {}
@@ -168,9 +157,7 @@ export default {
   components: {
     FeatureComponent,
     CategoryComponentItem
-    //FeatureComponent,
-  },
-  mounted() {
+
   },
   setup() {
     const DialogController = function () {
@@ -230,7 +217,7 @@ export default {
       this.index = ref(0)
       this.currentCategory = computed(() => this.indexToCategory(this.index.value))
       this.currentPageContents = computed(() => this.pageContents(this.index.value))
-      this.isLastPage = computed(() =>  this.index.value === (this.pageCount.value - 1))
+      this.isLastPage = computed(() => this.index.value === (this.pageCount.value - 1))
 
       //Change Page
       this.relativeChangePage = function (offset) {

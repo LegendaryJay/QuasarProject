@@ -1,5 +1,6 @@
 <script>
 import EditExtendo from "@/components/EditExtendo";
+import {computed} from "vue";
 export default {
   components: {EditExtendo},
   props: {
@@ -7,31 +8,45 @@ export default {
       type: Object,
       required: true,
     },
-    active: Boolean,
-    disableUp: Boolean,
-    disableDown: Boolean,
+    index: {
+      type: Number,
+      default: -1
+    },
+    pageInfo: {
+      type: Object,
+      required: true,
+    },
+    editCommands: {
+      type:Object,
+      default: null
+    }
   },
-  emits: ['set-category-page', 'up', 'down', 'delete', "edit"],
-  setup() {
+  setup(props) {
+
+    const isActive = computed(() => props.index === props.pageInfo.index.value)
+    const changePage = () => props.pageInfo.changePage(props.index)
+
     return {
+      isActive,
+      changePage,
     }
   },
 }
 </script>
 
 <template>
-  <q-item v-on:click="$emit('set-category-page')" clickable :active="active" v-ripple>
+  <q-item v-on:click="changePage" clickable :active="isActive" v-ripple>
     <q-item-section :id="category.id">
       {{ category.title }}
     </q-item-section>
     <edit-extendo
-        v-if="category.id !== -1"
-        @up="$emit('up')"
-        @down="$emit('down')"
-        @edit="$emit('edit', category)"
-        @delete="$emit('delete', category)"
-        :disable-down="disableDown"
-        :disable-up="disableUp"
+        v-if="editCommands !== null"
+        @up="$emit('swap', index, index - 1)"
+        @down="$emit('swap', index, index + 1)"
+        @edit="() => editCommands.edit(category)"
+        @delete="() => editCommands.remove(category)"
+        :disable-up="index===0"
+        :disable-down="index === pageInfo.pageCount.value -1"
     />
 
   </q-item>
