@@ -11,9 +11,6 @@ export class Category {
         this.type = ELEMENT_TYPE.CATEGORY
         this.id = id ?? uuidv4()
         this.title = title ?? ""
-        /**
-         * @deprecated since version 2.0
-         */
     }
 }
 
@@ -48,15 +45,6 @@ export function GeneralCollection() {
         return this._arr.indexOf(item)
     }
 
-    /**
-     * @deprecated since version 2.0
-     */
-    this.swapPositions = function (itemA, itemB) {
-        this.swapItemsByIndex(this._arr.indexOf(itemA),this._arr.indexOf(itemB))
-
-        return this;
-    }
-
     //Position shifts
     this.swapItemsByIndex = function (indexA, indexB){
         this._arr.splice(indexA, 1, this._arr.splice(indexB, 1, this._arr[indexA])[0])
@@ -80,10 +68,6 @@ export function GeneralCollection() {
 
         return this;
     }
-
-    /**
-     * @deprecated since version 2.0
-     */
 
     this.items = function () {
         return [...this._arr]
@@ -132,7 +116,7 @@ export function FeatureCollection() {
 }
 
 export function FeatureDataController() {
-    this.defaultCategory = () => new Category('', -1)
+    this.defaultCategory = () => new Category('[Undefined]', -1)
 
     this.categories = new CategoryCollection()
     this.features = new FeatureCollection()
@@ -151,6 +135,7 @@ export function FeatureDataController() {
         .filter(category => this.features.items().some(feature => feature.categoryId === category.id))
 
     const oldCatRemove = this.categories.remove
+    // eslint-disable-next-line no-unused-vars
     this.categories.remove = (item) => {
         oldCatRemove.apply(this.categories, arguments)
         this.features.itemsWithoutCategory().forEach(feature => feature.categoryId = -1);
@@ -159,9 +144,9 @@ export function FeatureDataController() {
     }
 }
 
-export const PageInfo = function (dataController) {
+export const PageInfo = function (dataController, editMode = ref(false)) {
     //Pages
-    this.pages = computed(() => dataController.categories.usedCategories())
+    this.pages = computed(() => editMode.value ? dataController.categories.items() : dataController.categories.usedCategories())
     this.pageCount = computed(() => this.pages.value.length)
 
     //Current Page
@@ -181,15 +166,23 @@ export const PageInfo = function (dataController) {
 
     //Main methods
     this.indexToCategory = function (i) {
-        return i > -1 ? this.pages.value[i] : dataController.defaultCategory
+        if (i === -1 || (typeof this.pages.value?.[i] === 'undefined')){
+            return dataController.defaultCategory()
+        }
+        return this.pages.value[i]
     }
     this.pageContents = (index) => {
-        return index !== -1 ? dataController.features.itemsByCategory(this.indexToCategory(index).id) : dataController.features.itemsWithoutCategory()
+        return index !== -1 ? dataController.features.itemsByCategory(this.indexToCategory(index)?.id) : dataController.features.itemsWithoutCategory()
     }
 
     //clamp
     this.clampToPage = (value) => {
         return Math.min(Math.max(value, -1), this.pageCount.value - 1)
+    }
+
+    //isEmpty
+    this.contentCount = (category) => {
+        return dataController.features.itemsByCategory(category.id).length
     }
 
 }

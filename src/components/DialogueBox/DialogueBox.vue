@@ -17,7 +17,7 @@
 
       <!-- buttons example -->
       <q-card-actions align="right">
-        <q-btn color="grey" label="Cancel" @click="onCancelClick" v-if="cancelActive"/>
+        <q-btn color="#grey-9" label="Cancel" @click="onCancelClick" v-if="cancelActive"/>
         <q-btn color="primary" :label="confirmText" @click="onOKClick"/>
       </q-card-actions>
     </q-card>

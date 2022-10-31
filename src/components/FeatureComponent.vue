@@ -1,6 +1,7 @@
 <script>
 import FeatureComponentItem from "@/components/FeatureComponentItem";
-import {computed} from "vue";
+import {computed, ref} from "vue";
+import {ELEMENT_TYPE} from "@/components/scripts/appdata";
 
 export default {
   components: {FeatureComponentItem},
@@ -14,6 +15,10 @@ export default {
       type: Object,
       required: true
     },
+    editMode: {
+      type: Boolean,
+      default: false,
+    },
   },
   mounted() {
   },
@@ -24,10 +29,28 @@ export default {
       let i = info.index.value
       let nextIndex = info.clampToPage(i + 1)
       return info.indexToCategory(nextIndex)
-    } )
+    })
+
+
+    const fabPos = ref([20, 80])
+    const draggingFab = ref(false)
     return {
       features,
       nextCategory,
+      ELEMENT_TYPE,
+
+
+      fabPos,
+      draggingFab,
+
+      moveFab(ev) {
+        draggingFab.value = ev.isFirst !== true && ev.isFinal !== true
+
+        fabPos.value = [
+          fabPos.value[0] - ev.delta.x,
+          fabPos.value[1] - ev.delta.y
+        ]
+      },
     }
   },
 
@@ -36,11 +59,14 @@ export default {
 
 <template>
   <q-page-container>
-    <h3 class="text-h3 q-my-sm q-mt-md q-mx-md text-center text-bold"> {{ pageInfo.currentCategory.value.title}} </h3>
+    <h3 class="text-h3 q-my-sm q-mt-md q-mx-md text-center text-bold">
+      {{ pageInfo.currentCategory.value?.title ?? '[Missing]' }} </h3>
+
     <FeatureComponentItem
         v-for="(feature, index) in features"
         :key="index"
         :feature="feature"
+        :edit-mode="editMode"
         @up="$emit('swap', feature, features[index - 1])"
         @down="$emit('swap', feature, features[index + 1])"
         @edit="() => editCommands.edit(feature)"
@@ -50,10 +76,25 @@ export default {
     >
     </FeatureComponentItem>
     <div class="q-pa-md text-center row justify-center items-center">
-      <q-btn v-on:click="pageInfo.isLastPage.value ? console.log('Downloading...') : pageInfo.changePageById(nextCategory.id)" color="primary" class="full-width"
-             :label="pageInfo.isLastPage.value ? 'Download Now' : nextCategory.title"/>
+      <q-btn
+          v-on:click="pageInfo.isLastPage.value ? console.log('Downloading...') : pageInfo.changePageById(nextCategory.id)"
+          color="primary" class="full-width"
+          :label="pageInfo.isLastPage.value ? 'Download Now' : nextCategory.title"/>
     </div>
+
   </q-page-container>
+  <q-page-sticky
+      v-if="editMode"
+      position="bottom-right" :offset="fabPos">
+    <q-btn
+        fab
+        icon="add"
+        color="accent"
+        padding="xs"
+        @click="editCommands.add(ELEMENT_TYPE.FEATURE)"
+        v-touch-pan.prevent.mouse="moveFab"
+    />
+  </q-page-sticky>
 </template>
 
 

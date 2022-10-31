@@ -12,6 +12,10 @@ export default {
     },
     disableDown: Boolean,
     disableUp: Boolean,
+    editMode: {
+      type: Boolean,
+      default: false,
+    }
   },
   data() {
     return {}
@@ -21,7 +25,7 @@ export default {
 </script>
 <template>
   <div class="q-pa-md">
-    <q-layout view="lHh Lpr lFf" container style="min-height: 225px" class="shadow-2 rounded-borders">
+    <q-layout view="lHh Lpr lFf" container style="min-height: 225px" class="featureItem shadow-2 rounded-borders">
       <q-header reveal elevated>
         <q-toolbar>
           <q-toolbar-title>
@@ -38,6 +42,7 @@ export default {
         </q-page>
         <q-page-sticky class="q-pa-xs" position="bottom-right" :offset="[5, 5]">
           <edit-extendo
+              v-if="editMode"
               @up="$emit('up')"
               @down="$emit('down')"
               @edit="$emit('edit')"
@@ -55,5 +60,8 @@ export default {
 </template>
 
 
-<style>
+<style lang="scss">
+.featureItem {
+  background-color: $feature;
+}
 </style>

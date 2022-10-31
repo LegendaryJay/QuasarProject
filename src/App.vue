@@ -5,10 +5,16 @@
     <q-header elevated class="bg-primary text-white">
       <q-toolbar>
         <q-toolbar-title>
-          Spirit Tree Mod <small>[Edit mode]</small>
+          Spirit Tree Mod <small v-if="editMode">[Edit mode]</small>
         </q-toolbar-title>
-
+        <q-toggle
+            v-model="editMode"
+            icon="edit"
+            color="accent"
+        />
       </q-toolbar>
+
+
     </q-header>
 
     <q-drawer
@@ -18,36 +24,50 @@
         bordered
         class="bg-grey-3"
     >
-      <q-scroll-area style="height: calc(100% - 150px); margin-top: 150px; border-right: 1px solid #ddd">
+      <q-scroll-area class="drawer" style="height: calc(100% - 150px); margin-top: 150px;">
         <q-list>
           <category-component-item
               v-for="(category, index) in pageInfo.pages.value"
               :category="category"
               :key="index"
 
-              :index = index
+              :index=index
               :page-info="pageInfo"
               :edit-commands="dialogController"
+              :edit-mode="editMode"
               @swap="(a, b) => dataController.categories.swapItemsByIndex(a, b)"
           />
 
           <category-component-item
-              v-if="dataController.features.itemsWithoutCategory().length"
+              v-if="editMode & dataController.features.itemsWithoutCategory().length > 0"
               :page-info="pageInfo"
 
-              :category="{title:'[Undefined]', id:-1}"
+              :category="dataController.defaultCategory()"
           >
           </category-component-item>
 
         </q-list>
       </q-scroll-area>
+
       <q-img class="absolute-top" src="./assets/tree.jpg" style="height: 150px">
         <div class="absolute-bottom bg-transparent">
           <div class="text-weight-bold">Features</div>
         </div>
       </q-img>
+      <q-page-sticky
+          v-if="editMode"
+          position="bottom-right" :offset="[10, 10]">
+        <q-btn
+            fab
+            icon="add"
+            color="accent"
+            padding="xs"
+            @click="dialogController.add(ELEMENT_TYPE.CATEGORY)"
+        />
+      </q-page-sticky>
     </q-drawer>
     <FeatureComponent
+        :edit-mode="editMode"
         :page-info="pageInfo"
         :edit-commands="dialogController"
         @swap="(a, b) => dataController.features.swapItems(a, b)"
@@ -65,7 +85,6 @@
 
 <script>
 
-import {computed, ref} from "vue";
 import FeatureComponent from "@/components/FeatureComponent";
 import {useQuasar} from "quasar";
 import DialogueBox from "@/components/DialogueBox/DialogueBox";
@@ -73,18 +92,21 @@ import CategoryInput from "@/components/DialogueBox/CategoryInput";
 import FeatureInput from "@/components/DialogueBox/FeatureInput";
 
 import CategoryComponentItem from "@/components/CategoryComponentItem";
-import {ELEMENT_TYPE, importData} from "@/components/scripts/appdata";
+import {Category, ELEMENT_TYPE, Feature, importData, PageInfo} from "@/components/scripts/appdata";
+import {ref} from "vue";
 
 const dataController = importData()
 
 const typeDirector = {}
 typeDirector[ELEMENT_TYPE.CATEGORY] = {
   controller: dataController.categories,
-  component: CategoryInput
+  component: CategoryInput,
+  newItem: () => new Category()
 }
 typeDirector[ELEMENT_TYPE.FEATURE] = {
   controller: dataController.features,
-  component: FeatureInput
+  component: FeatureInput,
+  newItem: () => new Feature()
 }
 
 
@@ -94,8 +116,10 @@ export default {
     CategoryComponentItem
   },
   setup() {
+    const editMode = ref(false)
     const DialogController = function () {
       const $q = useQuasar()
+      $q.dark.set(true)
       this.remove = function (item) {
         $q.dialog({
           component: DialogueBox,
@@ -125,65 +149,39 @@ export default {
         })
       }
 
-      this.add = function (item) {
+      this.add = function (itemType) {
+        const item = typeDirector[itemType].newItem()
         $q.dialog({
-          component: typeDirector[item.type].component,
+          component: typeDirector[itemType].component,
           componentProps: {
-            title: "Add New " + item.type,
+            title: "Add New " + itemType,
             cancelActive: true,
-            confirmText: "Save " + item.type,
+            confirmText: "Save " + itemType,
             item: item,
-            onSave: () => typeDirector[item.type].controller.add(item),
+            onSave: () => typeDirector[itemType].controller.add(item),
             categories: dataController.categories.items(),
           }
         })
       }
     }
-    const dialogController = new DialogController()
 
-    const PageInfo = function () {
-      //Pages
-      this.pages = computed(() => dataController.categories.usedCategories())
-      this.pageCount = computed(() => this.pages.value.length)
 
-      //Current Page
-      this.index = ref(0)
-      this.currentCategory = computed(() => this.indexToCategory(this.index.value))
-      this.currentPageContents = computed(() => this.pageContents(this.index.value))
-      this.isLastPage = computed(() => this.index.value === (this.pageCount.value - 1))
-
-      //Change Page
-      this.changePage = function (page) {
-        this.index.value = page
-      }
-      this.changePageById = function (id) {
-        let category = this.pages.value.find(category => category.id === id)
-        this.index.value = this.pages.value.indexOf(category)
-      }
-
-      //Main methods
-      this.indexToCategory = function (i) {
-        return i > -1 ? this.pages.value[i] : dataController.defaultCategory
-      }
-      this.pageContents = (index) => {
-        return index !== -1 ? dataController.features.itemsByCategory(this.indexToCategory(index).id) : dataController.features.itemsWithoutCategory()
-      }
-
-      //clamp
-      this.clampToPage = (value) => {
-        return Math.min(Math.max(value, -1), this.pageCount.value - 1)
-      }
-
-    }
-    const pageInfo = new PageInfo()
 
     return {
       dataController,
-
       typeDirector,
-      dialogController,
-      pageInfo,
+
+      ELEMENT_TYPE,
+      editMode,
+      pageInfo: new PageInfo(dataController, editMode),
+      dialogController: new DialogController()
     }
   },
 }
 </script>
+
+<style lang="scss">
+.drawer {
+  background-color: $feature;
+}
+</style>

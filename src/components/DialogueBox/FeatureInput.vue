@@ -9,18 +9,28 @@
       <q-card-section>
         <div class="q-py-md">
           <q-input
+              dark standout bottom-slots
               :model-value="item.title"
               @update:model-value="(value) => {item.title=value}"
               label="Title"/>
         </div>
         <div class="q-py-md q-pb-xl ">
-          <q-btn-dropdown color="primary" :label="'Category [' + itemCategory?.title + ']'">
+          <q-btn-dropdown
+              color="primary"
+              outline:white
+              :label="'Category: ' + categoryName"
+              content-style="background-color: #8A9364"
+          >
             <q-list>
+              <q-item clickable v-close-popup @click="changeCategoryTo(-1)" :active="isActive(-1)">
+                <q-item-section>
+                  <q-item-label> None</q-item-label>
+                </q-item-section>
+              </q-item>
               <template v-for="(category, index) in categories" :key="index">
-                <q-item clickable v-close-popup @click="item.categoryId = category.id">
+                <q-item clickable v-close-popup @click="changeCategoryTo(category.id)" :active="isActive(category.id)">
                   <q-item-section>
-                    <q-item-label :class="category.id === item.categoryId ? 'text-bold' : ''">{{ category.title + (category.id === item.categoryId ? " (Current)" : "") }}
-                    </q-item-label>
+                    <q-item-label> {{ category.title }}</q-item-label>
                   </q-item-section>
                 </q-item>
               </template>
@@ -30,6 +40,7 @@
 
         <div class="q-py-md">
           <q-input
+              dark standout bottom-slots
               :model-value="item.description"
               @update:model-value="(value) => {item.description=value}"
               label="Description"
@@ -48,7 +59,7 @@
 
       <!-- buttons example -->
       <q-card-actions align="right">
-        <q-btn color="grey" label="Cancel" @click="onCancelClick" v-if="cancelActive"/>
+        <q-btn color="grey-9" label="Cancel" @click="onCancelClick" v-if="cancelActive"/>
         <q-btn color="primary" :label="confirmText" @click="onOKClick"/>
       </q-card-actions>
     </q-card>
@@ -57,7 +68,7 @@
 
 <script>
 import {useDialogPluginComponent} from 'quasar'
-import {computed} from "vue";
+import {computed, ref} from "vue";
 
 export default {
   props: {
@@ -97,8 +108,22 @@ export default {
   ],
 
   setup(props) {
+    const updateVal = ref(0)
+    const update = () => {
+      updateVal.value++
+    }
 
-    const itemCategory = computed( () => props.categories?.find(x=> x.id === props.item.categoryId) )
+
+    const changeCategoryTo = (id) => {
+      update()
+      // eslint-disable-next-line vue/no-mutating-props
+      props.item.categoryId = id
+    }
+
+    const itemCategory = computed(() => {
+      updateVal.value
+      return props.categories?.find(x => x.id === props.item.categoryId)
+    })
 
     // REQUIRED; must be called inside of setup()
     const {dialogRef, onDialogHide, onDialogOK, onDialogCancel} = useDialogPluginComponent()
@@ -122,16 +147,30 @@ export default {
       onOKClick() {
         props.onSave(),
 
-        // on OK, it is REQUIRED to
-        // call onDialogOK (with optional payload)
-        onDialogOK()
+            // on OK, it is REQUIRED to
+            // call onDialogOK (with optional payload)
+            onDialogOK()
         // or with payload: onDialogOK({ ... })
         // ...and it will also hide the dialog automatically
       },
 
       // we can passthrough onDialogCancel directly
-      onCancelClick: onDialogCancel
+      onCancelClick: onDialogCancel,
+      update,
+      isActive: function (itemId) {
+        return itemId === props.item?.categoryId
+      },
+
+      categoryName: computed(() => itemCategory.value?.title ?? 'None'),
+      changeCategoryTo,
+      updateVal,
     }
   }
 }
 </script>
+
+<style lang="scss">
+.q-list--active {
+  background-color: $feature;
+}
+</style>
