@@ -5,7 +5,7 @@
     <q-header elevated class="bg-primary text-white">
       <q-toolbar>
         <q-toolbar-title>
-          Spirit Tree Mod <small v-if="editMode">[Edit mode]</small>
+          <h2 class="q-my-md"> Spirit Tree Mod </h2> <small v-if="editMode">[Edit mode]</small>
         </q-toolbar-title>
         <q-toggle
             v-model="editMode"

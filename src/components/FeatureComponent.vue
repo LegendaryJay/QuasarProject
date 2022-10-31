@@ -59,8 +59,8 @@ export default {
 
 <template>
   <q-page-container>
-    <h3 class="text-h3 q-my-sm q-mt-md q-mx-md text-center text-bold">
-      {{ pageInfo.currentCategory.value?.title ?? '[Missing]' }} </h3>
+    <h5 class="text-h4 q-my-sm q-mt-md q-mx-md text-center text-bold">
+      {{ pageInfo.currentCategory.value?.title ?? '[Missing]' }} </h5>
 
     <FeatureComponentItem
         v-for="(feature, index) in features"
